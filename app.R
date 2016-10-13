@@ -19,9 +19,7 @@ axistheme <- theme(plot.title = element_text(color = "black", face = "bold", siz
 dat<-read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/preg.csv",header=TRUE)
 age<-dat$age
 mu<-mean(age)
-reps<-100
-res <- NULL
-Q <- NULL
+
 # This is to keep the samples the same for each student, but let them differ
 # between students
 #random_seed <- as.numeric(Sys.time())
@@ -63,6 +61,9 @@ ui <- fluidPage(
   
 # Define a server for the Shiny app
 server <-function(input, output) {
+  mylist <- reactiveValues(reps = 100, conf = 95)
+  res <- NULL
+  Q <- NULL
   random_seed <- as.numeric(Sys.time())  
   output$ConfPlot<-renderPlot({
     N<-input$N
