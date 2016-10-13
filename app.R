@@ -28,7 +28,7 @@ ui <- fluidPage(
     sidebarLayout(
       sidebarPanel(
         numericInput("N","Sample Size",value=100,min=1),
-        numericInput("conflev","Confidence Level (enter a value (Danny suggests: in percent) between 1 and 99.99)",value=95,min=1,max=100),
+        numericInput("conf","Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
         hr(),
         tags$div(class="header", checked=NA,
                  tags$p("This application uses recent NHANES data about pregnant women 
@@ -61,27 +61,41 @@ ui <- fluidPage(
   
 # Define a server for the Shiny app
 server <-function(input, output) {
-  mylist <- reactiveValues(reps = 100, conf = 95)
+  reps <- 100
   res <- NULL
   Q <- NULL
-  random_seed <- as.numeric(Sys.time())  
-  output$ConfPlot<-renderPlot({
-    N<-input$N
-    Q<<-abs(qnorm((100-input$conflev)/200))
-    res<<-array(0,dim=c(reps,3)) 
+  interval <- NULL
+  mylist <- reactiveValues(N = 100, conf = 95)
+  observeEvent(input$N, {
+    mylist$N <- N
+    random_seed <- as.numeric(Sys.time())
     set.seed(random_seed)
-    for(i in 1:reps) {y<-sample(age,N)
-    res[i,1]<-mean(y)
-    res[i,2]<-sd(y)
-    res[i,3]<-sd(y)/sqrt(N)} 
+    res<<-array(0,dim=c(reps,3)) 
+    for(i in 1:reps) {
+      y<-sample(age,mylist$N)
+      res[i,1]<-mean(y)
+      res[i,2]<-sd(y)
+      res[i,3]<-sd(y)/sqrt(N)
+      interval<-c(res[i,1]-Q*res[i,3],res[i,1]+Q*res[i,3])
+      }
+  })
+  
+  observeEvent(input$conf, {
+    mylist$conf <- conf
+    Q<<-abs(qnorm((100-mylist$conf)/200))
+  })
+  
+    
+  output$ConfPlot<-renderPlot({
+    
     plot(mu + c(-5,5),c(1,1),type="n",xlab="Age",
          ylab="Intervals",ylim=c(1,100))
-    abline(v=mean(age))
+    abline(v=mu)
     
     for(i in 1:reps){
-      interval<-c(res[i,1]-Q*res[i,3],res[i,1]+Q*res[i,3])
-      color<-ifelse(interval[1]<=mean(age) & 
-                      interval[2]>=mean(age),1,2)
+      
+      color<-ifelse(interval[1]<=mu & 
+                      interval[2]>=mu,1,2)
       lines(interval, c(i,i),col=color)
     } 
     
@@ -90,13 +104,6 @@ server <-function(input, output) {
   output$SampMeanHist <- renderPlot({
     
     # Render a histogram of 100 sample means
-    res<<-array(0,dim=c(reps,3)) 
-    set.seed(random_seed)
-    for(i in 1:reps) {y<-sample(age,N)
-    res[i,1]<-mean(y)
-    res[i,2]<-sd(y)
-    res[i,3]<-sd(y)/sqrt(N)}
-    Q<<-abs(qnorm((100-input$conflev)/200))
     hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
          xlab="Sample average",ylab="Proportion per sample average",
          xlim=c(22,32),ylim=c(0,1), breaks=15)
