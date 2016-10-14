@@ -20,14 +20,11 @@ dat<-read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/pre
 age<-dat$age
 mu<-mean(age)
 
-# This is to keep the samples the same for each student, but let them differ
-# between students
-#random_seed <- as.numeric(Sys.time())
 ui <- fluidPage(
     titlePanel("Simulated Confidence Intervals for the mean age of pregnant women"),
     sidebarLayout(
       sidebarPanel(
-        numericInput("N","Sample Size",value=100,min=1),
+        numericInput("nsize","Sample Size",value=100,min=1),
         numericInput("conf","Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
         hr(),
         tags$div(class="header", checked=NA,
@@ -56,7 +53,7 @@ ui <- fluidPage(
         plotOutput("ConfPlot"),
         plotOutput("SampMeanHist")
       )
-                 )
+     )
     )
   
 # Define a server for the Shiny app
@@ -66,8 +63,8 @@ server <-function(input, output) {
   Q <- NULL
   interval <- NULL
   mylist <- reactiveValues(N = 100, conf = 95)
-  observeEvent(input$N, {
-    mylist$N <- N
+  observeEvent(input$nsize, {
+    mylist$N <- nsize
     random_seed <- as.numeric(Sys.time())
     set.seed(random_seed)
     res<<-array(0,dim=c(reps,3)) 
@@ -75,8 +72,7 @@ server <-function(input, output) {
       y<-sample(age,mylist$N)
       res[i,1]<-mean(y)
       res[i,2]<-sd(y)
-      res[i,3]<-sd(y)/sqrt(N)
-      interval<-c(res[i,1]-Q*res[i,3],res[i,1]+Q*res[i,3])
+      res[i,3]<-sd(y)/sqrt(mylist$N)
       }
   })
   
@@ -87,19 +83,14 @@ server <-function(input, output) {
   
     
   output$ConfPlot<-renderPlot({
-    
     plot(mu + c(-5,5),c(1,1),type="n",xlab="Age",
          ylab="Intervals",ylim=c(1,100))
     abline(v=mu)
-    
     for(i in 1:reps){
-      
-      color<-ifelse(interval[1]<=mu & 
-                      interval[2]>=mu,1,2)
-      lines(interval, c(i,i),col=color)
+      interval<-c(res[i,1]-Q*res[i,3],res[i,1]+Q*res[i,3])
+      color<-ifelse(interval[1]<=mu & interval[2]>=mu,1,2)
+      lines(interval, c(i,i), col=color)
     } 
-    
-    
   })
   output$SampMeanHist <- renderPlot({
     
