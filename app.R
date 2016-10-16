@@ -1,6 +1,17 @@
 library(shiny)
 library(ggplot2)
+plaintheme <- theme_bw() + 
+   theme(plot.background = element_blank(),
+         panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank() ) +
+   theme(panel.border = element_blank()) +
+   theme(axis.line.x = element_line(color="black", size = 1),
+         axis.line.y = element_line(color="black", size = 1))
 
+axistheme <- theme(plot.title = element_text(color = "black", face = "bold", size=28)) +
+   theme(axis.title = element_text(color = "black", size = 20)) +
+   theme(axis.text.x = element_text(size = 16)) +
+   theme(axis.text.y = element_text(size = 16))
 dat <- read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/preg.csv",header=TRUE)
 age <- dat$age
 mu <- mean(age)
@@ -14,8 +25,7 @@ ui <- fluidPage(
     hr()
   ),
   mainPanel(
-    tableOutput("ConfPlot"),
-    plotOutput("PracticeHist"),
+    plotOutput("ConfPlot"),
     plotOutput("SampMeanHist")
   )
 )
@@ -35,13 +45,11 @@ server <-function(input, output) {
   Q <- reactive({
     abs(qnorm((100-input$conf)/200))
   })
-  output$ConfPlot<-renderTable({
-    head(result())
-  })
-  output$PracticeHist <- renderPlot({
-    plot(mu + c(-5,5),c(1,1),type="n",xlab="Age",
-         ylab="Intervals",ylim=c(1,100))
-    abline(v=mu)
+  output$ConfPlot <- renderPlot({
+    plot(mu + c(-5,5), c(1,1), type = "n", xlab = "Age",
+         ylab = "Intervals", ylim = c(1,100), 
+         cex.axis = 2, cex.lab = 2, cex.main = 2)
+    abline(v = mu)
     res<-result()
     for(i in 1:reps){
       interval<-c(res[i,1]-Q()*res[i,3],res[i,1]+Q()*res[i,3])
@@ -51,15 +59,24 @@ server <-function(input, output) {
   })
   output$SampMeanHist <- renderPlot({
     res <- result()
-    Q <- Q()
-   
-    intmin<-mean(age)-Q*sd(age)/sqrt(input$nsize)
-    intmax<-mean(age)+Q*sd(age)/sqrt(input$nsize)
-    hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
-         xlab="Sample average",ylab="Proportion per sample average",
-         xlim=c(22,32),ylim=c(0,1), breaks=15)
-    abline(v=intmin,col="red",lwd=2)
-    abline(v=intmax,col="red",lwd=2) 
+    #Q <- Q()
+    dfres <- as.data.frame(res)
+    names(dfres) <- c("mean", "sd", "se")
+    intmin<-mean(age)-Q()*sd(age)/sqrt(input$nsize)
+    intmax<-mean(age)+Q()*sd(age)/sqrt(input$nsize)
+    
+    ggplot(dfres, aes(mean)) +
+       geom_dotplot(binwidth = .15, method = "histodot") +
+       geom_vline(xintercept = intmin, col = "red") +
+       geom_vline(xintercept = intmax, col = "red") +
+       scale_x_continuous("sample means", limits = c(24,30)) +
+       plaintheme +
+       axistheme
+    #hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
+    #     xlab="Sample average",ylab="Proportion per sample average",
+    #     xlim=c(22,32),ylim=c(0,1), breaks=15)
+    #abline(v=intmin,col="red",lwd=2)
+    #abline(v=intmax,col="red",lwd=2) 
     
   })
   
