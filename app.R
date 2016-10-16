@@ -18,12 +18,31 @@ mu <- mean(age)
 stdev <- sd(age)
 reps <- 100
 ui <- fluidPage(
-  titlePanel("Reactive Experiment"),
+  titlePanel("Simulated Confidence Intervals for the Mean Age of Pregnant Women"),
   sidebarPanel(
-    numericInput("nsize","Sample Size",value=100,min=1),
-    numericInput("conf","Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
-    hr()
-  ),
+    numericInput("nsize", "Sample Size", value = 100, min = 1, max = 150),
+    numericInput("conf", "Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
+    hr(),
+    tags$div(class = "header", checked = NA,
+             tags$p("This application uses recent NHANES data about pregnant women 
+                    in the United States. The average age of these women was 27.03 years."),
+             tags$p("The application will draw 100 samples of the size you specify
+                    and visually represent the confidence interval based on each
+                    sample. If the confidence interval does not include the true
+                    mean of 27.03, the interval will be colored red."),
+             tags$p("Try different values for both the sample size and the confidence
+                    level. Notice how the width of the intervals changes for different
+                    sample sizes and confidence levels. Does a larger sample size give
+                    narrower or wider intervals?"),
+             tags$p("Beneath the confidence interval plot, the application
+                    will construct a dotplot of the sample averages. Red 
+                    vertical lines will indicate which sample means fell outside of
+                    the indicated confidence level. ")
+             
+             
+             ),
+    helpText(" ")
+             ),
   mainPanel(
     plotOutput("ConfPlot"),
     plotOutput("SampMeanHist")
@@ -69,14 +88,10 @@ server <-function(input, output) {
        geom_dotplot(binwidth = .15, method = "histodot") +
        geom_vline(xintercept = intmin, col = "red") +
        geom_vline(xintercept = intmax, col = "red") +
-       scale_x_continuous("sample means", limits = c(24,30)) +
+       scale_x_continuous("Sample Means", limits = c(24,30)) +
+       scale_y_continuous(" ") +
        plaintheme +
        axistheme
-    #hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
-    #     xlab="Sample average",ylab="Proportion per sample average",
-    #     xlim=c(22,32),ylim=c(0,1), breaks=15)
-    #abline(v=intmin,col="red",lwd=2)
-    #abline(v=intmax,col="red",lwd=2) 
     
   })
   
