@@ -51,13 +51,15 @@ server <-function(input, output) {
   })
   output$SampMeanHist <- renderPlot({
     res <- result()
-    #intmin<-mean(age)-Q()*sd(age/sqrt(input$N))
-    #intmax<-mean(age)+Q()*sd(age/sqrt(input$N))
+    Q <- Q()
+   
+    intmin<-mean(age)-Q*sd(age)/sqrt(input$nsize)
+    intmax<-mean(age)+Q*sd(age)/sqrt(input$nsize)
     hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
          xlab="Sample average",ylab="Proportion per sample average",
          xlim=c(22,32),ylim=c(0,1), breaks=15)
-    #abline(v=intmin,col="red",lwd=2)
-    #abline(v=intmax,col="red",lwd=2) 
+    abline(v=intmin,col="red",lwd=2)
+    abline(v=intmax,col="red",lwd=2) 
     
   })
   
