@@ -1,113 +1,66 @@
 library(shiny)
 library(ggplot2)
 
-plaintheme <- theme_bw() + 
-  theme(plot.background = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank() ) +
-  theme(panel.border = element_blank()) +
-  theme(axis.line.x = element_line(color="black", size = 1),
-        axis.line.y = element_line(color="black", size = 1))
-
-axistheme <- theme(plot.title = element_text(color = "black", face = "bold", size=28)) +
-  theme(axis.title = element_text(color = "black", size = 20)) +
-  theme(axis.text.x = element_text(size = 16)) +
-  theme(axis.text.y = element_text(size = 16))
-
-#Simulated Confidence Intervals
-
-dat<-read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/preg.csv",header=TRUE)
-age<-dat$age
-mu<-mean(age)
-
+dat <- read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/preg.csv",header=TRUE)
+age <- dat$age
+mu <- mean(age)
+stdev <- sd(age)
+reps <- 100
 ui <- fluidPage(
-    titlePanel("Simulated Confidence Intervals for the mean age of pregnant women"),
-    sidebarLayout(
-      sidebarPanel(
-        numericInput("nsize","Sample Size",value=100,min=1),
-        numericInput("conf","Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
-        hr(),
-        tags$div(class="header", checked=NA,
-                 tags$p("This application uses recent NHANES data about pregnant women 
-                        in the United States. The average age of these women was 27.03 years."),
-                 tags$p("The application will draw 100 samples of the size you specify
-                        and visually represent the confidence interval based on each
-                        sample. If the confidence interval does not include the true
-                        mean of 27.03, the interval will be colored red."),
-                 tags$p("Try different values for both the sample size and the confidence
-                        level. Notice how the width of the intervals changes for different
-                        sample sizes and confidence levels. Does a larger sample size give
-                        narrower or wider intervals? Does a larger confidence level give
-                        narrower or wider intervals?"),
-                 tags$p("Beneath the confidence interval plot, the application
-                        will construct a histogram of the sample averages, along with the
-                        normal curve based on the expected value and standard error. Red 
-                        vertical lines will indicate which sample means fell outside of
-                        the indicated confidence level. ")
-                 
-                 
-                 ),
-        helpText(" ")
-                 ),
-      mainPanel(
-        plotOutput("ConfPlot"),
-        plotOutput("SampMeanHist")
-      )
-     )
-    )
-  
-# Define a server for the Shiny app
+  titlePanel("Reactive Experiment"),
+  sidebarPanel(
+    numericInput("nsize","Sample Size",value=100,min=1),
+    numericInput("conf","Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
+    hr()
+  ),
+  mainPanel(
+    tableOutput("ConfPlot"),
+    plotOutput("PracticeHist"),
+    plotOutput("SampMeanHist")
+  )
+)
+
 server <-function(input, output) {
-  reps <- 100
-  res <- NULL
   Q <- NULL
-  interval <- NULL
-  mylist <- reactiveValues(N = 100, conf = 95)
-  observeEvent(input$nsize, {
-    mylist$N <- nsize
-    random_seed <- as.numeric(Sys.time())
-    set.seed(random_seed)
-    res<<-array(0,dim=c(reps,3)) 
+  result <- reactive({
+    res<<-array(0,dim=c(reps,3))
     for(i in 1:reps) {
-      y<-sample(age,mylist$N)
+      y<-sample(age,input$nsize)
       res[i,1]<-mean(y)
       res[i,2]<-sd(y)
-      res[i,3]<-sd(y)/sqrt(mylist$N)
-      }
+      res[i,3]<-sd(y)/sqrt(input$nsize)
+    }
+    res
+  } )
+  Q <- reactive({
+    abs(qnorm((100-input$conf)/200))
   })
-  
-  observeEvent(input$conf, {
-    mylist$conf <- conf
-    Q<<-abs(qnorm((100-mylist$conf)/200))
+  output$ConfPlot<-renderTable({
+    head(result())
   })
-  
-    
-  output$ConfPlot<-renderPlot({
+  output$PracticeHist <- renderPlot({
     plot(mu + c(-5,5),c(1,1),type="n",xlab="Age",
          ylab="Intervals",ylim=c(1,100))
     abline(v=mu)
+    res<-result()
     for(i in 1:reps){
-      interval<-c(res[i,1]-Q*res[i,3],res[i,1]+Q*res[i,3])
+      interval<-c(res[i,1]-Q()*res[i,3],res[i,1]+Q()*res[i,3])
       color<-ifelse(interval[1]<=mu & interval[2]>=mu,1,2)
       lines(interval, c(i,i), col=color)
     } 
   })
   output$SampMeanHist <- renderPlot({
-    
-    # Render a histogram of 100 sample means
+    res <- result()
+    #intmin<-mean(age)-Q()*sd(age/sqrt(input$N))
+    #intmax<-mean(age)+Q()*sd(age/sqrt(input$N))
     hist(res[,1],prob=TRUE,main=paste("Histogram of",reps," sample averages"),
          xlab="Sample average",ylab="Proportion per sample average",
          xlim=c(22,32),ylim=c(0,1), breaks=15)
-    points(seq(min(age), max(age), length.out=500),
-           dnorm(seq(min(age), max(age), length.out=500),
-                 mean(age), sd(age)/sqrt(input$N)), type="l", col="darkblue", lwd=2)
-    intmin<-mean(age)-Q*sd(age/sqrt(input$N))
-    intmax<-mean(age)+Q*sd(age/sqrt(input$N))
-    abline(v=intmin,col="red",lwd=2)
-    abline(v=intmax,col="red",lwd=2) 
+    #abline(v=intmin,col="red",lwd=2)
+    #abline(v=intmax,col="red",lwd=2) 
     
   })
+  
 }
 
 shinyApp(ui = ui, server = server)
-
