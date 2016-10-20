@@ -1,5 +1,7 @@
 library(shiny)
 library(ggplot2)
+library(dplyr)
+
 plaintheme <- theme_bw() + 
    theme(plot.background = element_blank(),
          panel.grid.major = element_blank(),
@@ -71,7 +73,7 @@ server <-function(input, output) {
     abline(v = mu)
     res<-result()
     for(i in 1:reps){
-      interval<-c(res[i,1]-Q()*res[i,3],res[i,1]+Q()*res[i,3])
+      interval<-c(res[i,1]-Q()*stdev/sqrt(input$nsize),res[i,1]+Q()*stdev/sqrt(input$nsize))
       color<-ifelse(interval[1]<=mu & interval[2]>=mu,1,2)
       lines(interval, c(i,i), col=color)
     } 
@@ -83,9 +85,10 @@ server <-function(input, output) {
     names(dfres) <- c("mean", "sd", "se")
     intmin<-mean(age)-Q()*sd(age)/sqrt(input$nsize)
     intmax<-mean(age)+Q()*sd(age)/sqrt(input$nsize)
+    dfres <- mutate(dfres, cover = (mean > intmin & mean < intmax))
     
     ggplot(dfres, aes(mean)) +
-       geom_dotplot(binwidth = .15, method = "histodot") +
+       geom_dotplot(aes(fill = cover), binwidth = .15, method = "histodot") +
        geom_vline(xintercept = intmin, col = "red") +
        geom_vline(xintercept = intmax, col = "red") +
        scale_x_continuous("Sample Means", limits = c(24,30)) +
