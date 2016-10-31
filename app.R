@@ -89,10 +89,12 @@ server <-function(input, output) {
     
     ggplot(dfres, aes(mean)) +
        geom_dotplot(aes(fill = cover), binwidth = .15, method = "histodot") +
+       scale_fill_manual(values=c("red", "gray30")) +
        geom_vline(xintercept = intmin, col = "red") +
        geom_vline(xintercept = intmax, col = "red") +
        scale_x_continuous("Sample Means", limits = c(24,30)) +
        scale_y_continuous(" ") +
+       guides(fill = FALSE) +
        plaintheme +
        axistheme
     
