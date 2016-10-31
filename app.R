@@ -3,27 +3,29 @@ library(ggplot2)
 library(dplyr)
 
 plaintheme <- theme_bw() + 
-   theme(plot.background = element_blank(),
-         panel.grid.major = element_blank(),
-         panel.grid.minor = element_blank() ) +
-   theme(panel.border = element_blank()) +
-   theme(axis.line.x = element_line(color="black", size = 1),
-         axis.line.y = element_line(color="black", size = 1))
+  theme(plot.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank() ) +
+  theme(panel.border = element_blank()) +
+  theme(axis.line.x = element_line(color="black", size = 1),
+        axis.line.y = element_line(color="black", size = 1))
 
 axistheme <- theme(plot.title = element_text(color = "black", face = "bold", size=28)) +
-   theme(axis.title = element_text(color = "black", size = 20)) +
-   theme(axis.text.x = element_text(size = 16)) +
-   theme(axis.text.y = element_text(size = 16))
+  theme(axis.title = element_text(color = "black", size = 20)) +
+  theme(axis.text.x = element_text(size = 16)) +
+  theme(axis.text.y = element_text(size = 16))
 dat <- read.csv("http://www.math.usu.edu/cfairbourn/Stat2300/RStudioFiles/data/preg.csv",header=TRUE)
 age <- dat$age
 mu <- mean(age)
 stdev <- sd(age)
-reps <- 100
+#reps <- 50
 ui <- fluidPage(
   titlePanel("Simulated Confidence Intervals for the Mean Age of Pregnant Women"),
   sidebarPanel(
     numericInput("nsize", "Sample Size", value = 100, min = 1, max = 150),
     numericInput("conf", "Confidence Level (enter a percentage value for the confidence level between 1 and 99)",value=95,min=1,max=99),
+    numericInput("reps", "How many intervals to draw", value = 50, min = 10, max = 100),
+#    actionButton("resample", "Collect New Samples"),
     hr(),
     tags$div(class = "header", checked = NA,
              tags$p("This application uses recent NHANES data about pregnant women 
@@ -49,13 +51,14 @@ ui <- fluidPage(
     plotOutput("ConfPlot"),
     plotOutput("SampMeanHist")
   )
-)
+             )
 
 server <-function(input, output) {
   Q <- NULL
+  lims <- seq(22,32, 2)
   result <- reactive({
-    res<<-array(0,dim=c(reps,3))
-    for(i in 1:reps) {
+    res<<-array(0,dim=c(input$reps,3))
+    for(i in 1:input$reps) {
       y<-sample(age,input$nsize)
       res[i,1]<-mean(y)
       res[i,2]<-sd(y)
@@ -67,36 +70,37 @@ server <-function(input, output) {
     abs(qnorm((100-input$conf)/200))
   })
   output$ConfPlot <- renderPlot({
+    par(mar=c(5,6,4,2)+0.1)
     plot(mu + c(-5,5), c(1,1), type = "n", xlab = "Age",
-         ylab = "Intervals", ylim = c(1,100), 
+         ylab = "Intervals", ylim = c(1, input$reps), 
          cex.axis = 2, cex.lab = 2, cex.main = 2)
     abline(v = mu)
     res<-result()
-    for(i in 1:reps){
+    for(i in 1:input$reps){
       interval<-c(res[i,1]-Q()*stdev/sqrt(input$nsize),res[i,1]+Q()*stdev/sqrt(input$nsize))
       color<-ifelse(interval[1]<=mu & interval[2]>=mu,1,2)
       lines(interval, c(i,i), col=color)
     } 
   })
   output$SampMeanHist <- renderPlot({
+    
     res <- result()
     #Q <- Q()
     dfres <- as.data.frame(res)
     names(dfres) <- c("mean", "sd", "se")
-    intmin<-mean(age)-Q()*sd(age)/sqrt(input$nsize)
-    intmax<-mean(age)+Q()*sd(age)/sqrt(input$nsize)
+    intmin<-mean(age)-Q()*stdev/sqrt(input$nsize)
+    intmax<-mean(age)+Q()*stdev/sqrt(input$nsize)
     dfres <- mutate(dfres, cover = (mean > intmin & mean < intmax))
     
     ggplot(dfres, aes(mean)) +
-       geom_dotplot(aes(fill = cover), binwidth = .15, method = "histodot") +
-       scale_fill_manual(values=c("red", "gray30")) +
-       geom_vline(xintercept = intmin, col = "red") +
-       geom_vline(xintercept = intmax, col = "red") +
-       scale_x_continuous("Sample Means", limits = c(24,30)) +
-       scale_y_continuous(" ") +
-       guides(fill = FALSE) +
-       plaintheme +
-       axistheme
+      geom_dotplot(aes(fill = cover), binwidth = .15, method = "histodot") +
+      geom_vline(xintercept = intmin, col = "red") +
+      geom_vline(xintercept = intmax, col = "red") +
+      scale_x_continuous("Sample Means", limits = c(22.25,32.25), breaks = seq(22,32,2)) +
+      scale_y_continuous(" ") +
+      guides(fill=FALSE) +
+      plaintheme +
+      axistheme
     
   })
   
