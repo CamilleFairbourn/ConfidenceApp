@@ -53,6 +53,7 @@ ui <- fluidPage(
 
 server <-function(input, output) {
   Q <- NULL
+  lims <- seq(22,32, 2)
   result <- reactive({
     res<<-array(0,dim=c(reps,3))
     for(i in 1:reps) {
@@ -67,6 +68,7 @@ server <-function(input, output) {
     abs(qnorm((100-input$conf)/200))
   })
   output$ConfPlot <- renderPlot({
+    par(mar=c(5,6,4,2)+0.1)
     plot(mu + c(-5,5), c(1,1), type = "n", xlab = "Age",
          ylab = "Intervals", ylim = c(1,100), 
          cex.axis = 2, cex.lab = 2, cex.main = 2)
@@ -79,20 +81,22 @@ server <-function(input, output) {
     } 
   })
   output$SampMeanHist <- renderPlot({
+    
     res <- result()
     #Q <- Q()
     dfres <- as.data.frame(res)
     names(dfres) <- c("mean", "sd", "se")
-    intmin<-mean(age)-Q()*sd(age)/sqrt(input$nsize)
-    intmax<-mean(age)+Q()*sd(age)/sqrt(input$nsize)
+    intmin<-mean(age)-Q()*stdev/sqrt(input$nsize)
+    intmax<-mean(age)+Q()*stdev/sqrt(input$nsize)
     dfres <- mutate(dfres, cover = (mean > intmin & mean < intmax))
     
     ggplot(dfres, aes(mean)) +
        geom_dotplot(aes(fill = cover), binwidth = .15, method = "histodot") +
        geom_vline(xintercept = intmin, col = "red") +
        geom_vline(xintercept = intmax, col = "red") +
-       scale_x_continuous("Sample Means", limits = c(24,30)) +
+       scale_x_continuous("Sample Means", limits = c(22.25,32.25), breaks = seq(22,32,2)) +
        scale_y_continuous(" ") +
+       guides(fill=FALSE) +
        plaintheme +
        axistheme
     
